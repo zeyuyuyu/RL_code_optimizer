@@ -47,6 +47,10 @@ class CodeOptimizeEnv:
         self.steps += 1
         new_code, changed = self.ct.propose(self.code, action)
 
+        if not changed:
+            done = self.steps >= self.max_steps
+            return self._obs(), -1.0, done, {"heu": 0.0, "lr": 0.0}
+
         # correctness
         if not self._correct(new_code):
             return self._obs(), -10.0, True, {}

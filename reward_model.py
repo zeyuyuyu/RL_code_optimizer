@@ -22,7 +22,8 @@ class PairwiseRewardModel:
         self.y.append(int(heuristic_improved))
 
     def fit(self):
-        if len(self.y) < 30: return
+        if len(self.y) < 30 or len(set(self.y)) < 2:
+            return
         self.clf.fit(self.X, self.y)
         self.ready = True
 
