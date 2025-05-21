@@ -24,19 +24,20 @@ os.makedirs("checkpoints", exist_ok=True)
 
 # ------------------ 训练循环 ------------------
 for ep in range(cfg["episodes"]):
-    s, logs, rs, done = env.reset(), [], [], False
+    s, logs, ents, rs, done = env.reset(), [], [], [], False
     while not done:
         st = torch.tensor(s).float().unsqueeze(0)
-        probs = policy(st)[0].detach().numpy()
-        a = np.random.choice(act_dim, p=probs)
-        logs.append(torch.log(policy(st)[0, a] + 1e-8))
+        probs = policy(st)[0]
+        a = np.random.choice(act_dim, p=probs.detach().numpy())
+        logs.append(torch.log(probs[a] + 1e-8))
+        ents.append(-(probs * torch.log(probs + 1e-8)).sum())
 
         s, r, done, _ = env.step(a)
         rs.append(r)
 
     G = sum(rs)
     hist.append(G)
-    batch.append((logs, G))
+    batch.append((logs, ents, G))
 
     #—— 训练 reward-model ————————————————
     if ep >= cfg["pretrain"] and ep % cfg["buffer"] == 0:
@@ -44,9 +45,14 @@ for ep in range(cfg["episodes"]):
 
     #—— 更新策略 ————————————————
     if (ep + 1) % cfg["batch"] == 0:
-        baseline = np.mean([g for _, g in batch])
-        loss = sum(-lp * (G - baseline)
-                   for logs, G in batch for lp in logs) / len(batch)
+        returns = [g for _, _, g in batch]
+        baseline = np.mean(returns)
+        advs = [g - baseline for g in returns]
+        loss = 0.0
+        for (logs, ents, _), adv in zip(batch, advs):
+            for lp, ent in zip(logs, ents):
+                loss += -lp * adv - 0.01 * ent
+        loss /= len(batch)
         opt.zero_grad()
         loss.backward()
         opt.step()
