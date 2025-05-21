@@ -11,7 +11,7 @@ def remove_docstring(fn: ast.FunctionDef) -> bool:
         fn.body.pop(0); return True
     return False
 
-# 1. 变量重命名（最长名 → 单字符）— 同步形参 ✔
+# 1. 变量重命名（最长名 → 单字符）— 同步形参 
 def rename_one_variable(fn: ast.FunctionDef) -> bool:
     names = {a.arg for a in fn.args.args}
     for n in ast.walk(fn):
