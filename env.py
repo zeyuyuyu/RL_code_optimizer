@@ -16,10 +16,12 @@ class CodeOptimizeEnv:
 
     # -------- dataset --------
     def _prepare_refs(self):
+        self.names = list(self.funcs)
         self.ref_funcs, self.tests, self.perfs = {}, {}, {}
         for n, code in self.funcs.items():
-            ns={}; exec(code, ns)
-            self.ref_funcs[n]=ns[n]
+            ns={"print": lambda *a, **k: None}
+            exec(code, ns)
+            self.ref_funcs[n] = ns[n]
             if n in ("sum_list","double_list"):
                 self.tests[n]=[([1,2,3],), ([],)]
                 self.perfs[n]=[([i for i in range(5000)],)]
@@ -35,17 +37,23 @@ class CodeOptimizeEnv:
 
     # -------- RL interface --------
     def reset(self):
-        self.name = random.choice(list(self.funcs))
+        self.idx = random.randrange(len(self.names))
+        self.name = self.names[self.idx]
         self.code = self.funcs[self.name]
         self.steps = 0
         return self._obs()
 
     def _obs(self):
-        return np.array([len(self.code)/100], dtype=np.float32)
+        return np.array([len(self.code)/100, self.idx/len(self.names)],
+                        dtype=np.float32)
 
     def step(self, action):
         self.steps += 1
         new_code, changed = self.ct.propose(self.code, action)
+
+        if not changed:
+            done = self.steps >= self.max_steps
+            return self._obs(), -1.0, done, {"heu": 0.0, "lr": 0.0}
 
         # correctness
         if not self._correct(new_code):
@@ -55,8 +63,8 @@ class CodeOptimizeEnv:
         heu = 0.0
         if changed:
             l_prev, l_new = len(self.code), len(new_code)
-            t_prev, t_new = self._rt(self.code), self._rt(new_code)
-            heu = (l_prev - l_new) + 20 * ((t_prev/t_new) - 1)
+            scale = 1.0 if action == 1 else 5.0
+            heu = scale * float(l_prev - l_new)
 
         # learned reward
         lr = self.rm.score(self.code, new_code)
@@ -64,7 +72,7 @@ class CodeOptimizeEnv:
         self.code = new_code
 
         mixed = self.cfg["alpha"]*heu + self.cfg["beta"]*lr
-        done = self.steps >= self.max_steps
+        done = self.steps >= self.max_steps or (heu > 0 and action != 1)
         return self._obs(), mixed, done, {"heu": heu, "lr": lr}
 
     # -------- helpers --------
@@ -74,7 +82,12 @@ class CodeOptimizeEnv:
     def _rt(self, code):
         fn = self._compile(code)
         args = self.perfs[self.name][0]
-        s=time.perf_counter(); fn(*args); return time.perf_counter()-s
+        times = []
+        for _ in range(5):
+            s = time.perf_counter()
+            fn(*args)
+            times.append(time.perf_counter() - s)
+        return sum(times) / len(times)
 
     def _correct(self, code):
         ref = self.ref_funcs[self.name]; new = self._compile(code)

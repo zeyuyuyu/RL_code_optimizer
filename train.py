@@ -9,9 +9,9 @@ from functions import functions
 
 # ------------------ 超参 ------------------
 cfg = dict(alpha=0.8, beta=0.2, max_steps=10,
-           episodes=1000, pretrain=200,
+           episodes=5000, pretrain=200, gamma=0.95,
            buffer=50, batch=20, lr=5e-4,
-           ckpt_interval=100)          
+           ckpt_interval=100)
 
 # ------------------ 初始化 ------------------
 env = CodeOptimizeEnv(functions, cfg)
@@ -24,19 +24,24 @@ os.makedirs("checkpoints", exist_ok=True)
 
 # ------------------ 训练循环 ------------------
 for ep in range(cfg["episodes"]):
-    s, logs, rs, done = env.reset(), [], [], False
+    s, logs, ents, rs, done = env.reset(), [], [], [], False
     while not done:
         st = torch.tensor(s).float().unsqueeze(0)
-        probs = policy(st)[0].detach().numpy()
-        a = np.random.choice(act_dim, p=probs)
-        logs.append(torch.log(policy(st)[0, a] + 1e-8))
+        probs = policy(st)[0]
+        a = np.random.choice(act_dim, p=probs.detach().numpy())
+        logs.append(torch.log(probs[a] + 1e-8))
+        ents.append(-(probs * torch.log(probs + 1e-8)).sum())
 
         s, r, done, _ = env.step(a)
         rs.append(r)
 
-    G = sum(rs)
-    hist.append(G)
-    batch.append((logs, G))
+    G = 0.0
+    rets = []
+    for r in reversed(rs):
+        G = r + cfg["gamma"] * G
+        rets.insert(0, G)
+    hist.append(sum(rs))
+    batch.append((logs, ents, rets))
 
     #—— 训练 reward-model ————————————————
     if ep >= cfg["pretrain"] and ep % cfg["buffer"] == 0:
@@ -44,9 +49,16 @@ for ep in range(cfg["episodes"]):
 
     #—— 更新策略 ————————————————
     if (ep + 1) % cfg["batch"] == 0:
-        baseline = np.mean([g for _, g in batch])
-        loss = sum(-lp * (G - baseline)
-                   for logs, G in batch for lp in logs) / len(batch)
+        all_rets = [r for _, _, rets in batch for r in rets]
+        baseline = np.mean(all_rets)
+        loss = 0.0
+        count = 0
+        for (logs, ents, rets) in batch:
+            for lp, ent, ret in zip(logs, ents, rets):
+                adv = ret - baseline
+                loss += -lp * adv - 0.01 * ent
+                count += 1
+        loss /= count
         opt.zero_grad()
         loss.backward()
         opt.step()

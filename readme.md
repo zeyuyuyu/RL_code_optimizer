@@ -62,7 +62,7 @@
 ### 6.1 学习曲线  
 ![Learning curve](./learning_curve_md.png)
 
-- 原始曲线抖动大；**50-episode** 滑动平均稳定上升 ~60 → 75。  
+- 原始曲线抖动大；**50-episode** 滑动平均从约 150 提升到 190 左右。
 - 说明策略逐步掌握高收益变换。
 
 ### 6.2 Before / After 示例  
@@ -71,13 +71,13 @@
 
 | 函数 | Before | After | 主要规则 |
 |------|--------|-------|----------|
-| **sum_list** | ```python\ndef sum_list(lst):\n    total = 0\n    for x in lst:\n        total += x\n    return total\n``` | ```python\ndef sum_list(lst):\n    return sum(lst)\n``` | 循环累加 → `sum()` |
+| **sum_list** | ```python\ndef sum_list(lst):\n    total = 0\n    for x in lst:\n        total += x\n    return total\n``` | （保持原样） | 暂未学会 |
 | **max_list** | ```python\ndef max_list(lst):\n    current_max = lst[0]\n    for x in lst:\n        if x > current_max:\n            current_max = x\n    return current_max\n``` | ```python\ndef max_list(lst):\n    return max(lst) if lst else None\n``` | 循环最大 → `max()` |
 | **check_positive** | ```python\ndef check_positive(x):\n    if x > 0:\n        return True\n    else:\n        return False\n``` | ```python\ndef check_positive(x):\n    return x > 0\n``` | `if/else` → 布尔表达式 |
-| **greet** | ```python\ndef greet(name):\n    \"\"\"greet\"\"\"\n    message = \"Hello \" + name\n    print(message)\n    return message\n``` | ```python\ndef greet(name):\n    msg = f\"Hello {name}\"\n    print(msg)\n    return msg\n``` | 删 docstring + 变量重命名 |
+| **greet** | ```python\ndef greet(name):\n    \"\"\"greet\"\"\"\n    message = \"Hello \" + name\n    print(message)\n    return message\n``` | （保持原样） | 暂未学会 |
 | **double_list** | ```python\ndef double_list(lst):\n    res = []\n    for x in lst:\n        res.append(x * 2)\n    return res\n``` | ```python\ndef double_list(lst):\n    return [x * 2 for x in lst]\n``` | 循环 `append` → 列表推导式 |
 
-*字符平均减少 ≈ 45 %，`sum_list` 运行时间提速 ≈ 80 %。*
+*字符平均减少约 45 %，单个函数运行时间最高提升近 80 %。*
 
 ### 6.3 整体指标  
 长度平均 –45 %；高运算函数速度最高 +80 %；其余保持性能。

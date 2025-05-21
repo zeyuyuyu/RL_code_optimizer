@@ -3,7 +3,7 @@ agent.py  – CodeTransformationAgent
 Wraps ACTIONS so policy can call propose(code, action_id).
 """
 import ast
-from transformations import ACTIONS
+from transformation import ACTIONS
 
 class CodeTransformationAgent:
     def __init__(self):
