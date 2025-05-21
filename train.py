@@ -35,6 +35,7 @@ for ep in range(cfg["episodes"]):
         s, r, done, _ = env.step(a)
         rs.append(r)
 
+
     G = 0.0
     rets = []
     for r in reversed(rs):
@@ -43,12 +44,14 @@ for ep in range(cfg["episodes"]):
     hist.append(sum(rs))
     batch.append((logs, ents, rets))
 
+
     #—— 训练 reward-model ————————————————
     if ep >= cfg["pretrain"] and ep % cfg["buffer"] == 0:
         env.rm.fit()
 
     #—— 更新策略 ————————————————
     if (ep + 1) % cfg["batch"] == 0:
+
         all_rets = [r for _, _, rets in batch for r in rets]
         baseline = np.mean(all_rets)
         loss = 0.0
@@ -59,6 +62,7 @@ for ep in range(cfg["episodes"]):
                 loss += -lp * adv - 0.01 * ent
                 count += 1
         loss /= count
+
         opt.zero_grad()
         loss.backward()
         opt.step()
