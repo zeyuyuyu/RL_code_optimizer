@@ -62,7 +62,7 @@
 ### 6.1 学习曲线  
 ![Learning curve](./learning_curve_md.png)
 
-- 原始曲线抖动大；**50-episode** 滑动平均稳定上升 ~60 → 75。  
+- 原始曲线抖动大；**200-episode** 滑动平均稳定上升 ~60 → 75。  
 - 说明策略逐步掌握高收益变换。
 
 ### 6.2 Before / After 示例  
