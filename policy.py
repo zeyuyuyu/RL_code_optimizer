@@ -1,10 +1,4 @@
-"""
-policy.py
-Simple MLP policy network.
-"""
-import torch.nn as nn
-import torch.nn.functional as F
-import torch
+import torch.nn as nn, torch.nn.functional as F, torch
 
 class PolicyNet(nn.Module):
     def __init__(self, obs_dim, act_dim):
@@ -16,4 +10,4 @@ class PolicyNet(nn.Module):
     def forward(self, x):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        return torch.softmax(self.out(x), dim=-1)
+        return torch.softmax(self.out(x), -1)
