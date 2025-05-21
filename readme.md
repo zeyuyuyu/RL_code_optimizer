@@ -18,26 +18,25 @@
 | **Synthetic mini-corpus** | 5 函数 | `sum_list / max_list / check_positive / greet / double_list`（5–10 行） |
 | **Stretch test** | +2 未见函数 | 训练后评估泛化：`product_list`, `abs_all` |
 
-> 若扩充，可直接替换 `functions.py` 或接入 **CodeSearchNet-Python 子集**（未在本实验启用）。
 
 ---
 
-## 3 Code Transformation Agent ✅
+## 3 Code Transformation Agent 
 
 | 组件 | 类型 | 关键点 |
 |------|------|--------|
 | **CodeTransformationAgent** (`agent.py`) | *AST-based transformer* | - 解析函数 AST<br>- 调用 6 条手写规则 (`transformations.py`)<br>- 返回 **合法 Python 源码** 与 `changed` 标志 |
 
-> 采用 AST 而非 token 随机编辑，能保证变换后代码语法正确；若要尝试 LLM，可替换 `propose()` 为调用 Code-Llama 生成重写。
+> 采用 AST 而非 token 随机编辑，能保证变换后代码语法正确
 
 ---
 
-## 4 奖励设计 🎯
+## 4 奖励设计 
 
 | 奖励类型 | 公式 / 训练 | 用途 |
 |----------|-------------|------|
-| **Heuristic-based** *(必须)* | \(R_h = \Delta \text{len} + 20 \times (\tfrac{t_{\text{prev}}}{t_{\text{new}}}-1)\) | 快速提供稠密、可解释信号 |
-| **Learned reward model** *(可选)* | `PairwiseRewardModel`<br>LogReg 在特征差分上判别「B 是否优于 A」 | 捕捉启发式未覆盖的细粒度改进 |
+| **Heuristic-based** | \(R_h = \Delta \text{len} + 20 \times (\tfrac{t_{\text{prev}}}{t_{\text{new}}}-1)\) | 快速提供稠密、可解释信号 |
+| **Learned reward model**  | `PairwiseRewardModel`<br>LogReg 在特征差分上判别「B 是否优于 A」 | 捕捉启发式未覆盖的细粒度改进 |
 
 > **混合奖励**：  
 > \[
@@ -51,7 +50,7 @@
 
 ---
 
-## 5 RL 算法 🔁
+## 5 RL 算法 
 
 | 模块 | 细节 |
 |------|------|
