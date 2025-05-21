@@ -11,24 +11,37 @@ def remove_docstring(fn: ast.FunctionDef) -> bool:
         fn.body.pop(0); return True
     return False
 
-# 1. 变量重命名（最长名 → 单字符）— 同步形参 
+# 1. 批量变量重命名（所有 >1 字符 → 单字符）
 def rename_one_variable(fn: ast.FunctionDef) -> bool:
     names = {a.arg for a in fn.args.args}
     for n in ast.walk(fn):
         if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Store):
             names.add(n.id)
-    longest = max((n for n in names if len(n) > 1), key=len, default=None)
-    if not longest: return False
-    new = next((c for c in "abcdefghijklmnopqrstuvwxyz" if c not in names), None)
-    if not new: return False
+
+    candidates = sorted((n for n in names if len(n) > 1), key=len, reverse=True)
+    if not candidates:
+        return False
+
+    available = [c for c in "abcdefghijklmnopqrstuvwxyz" if c not in names]
+    repl = {}
+    for old in candidates:
+        if not available:
+            break
+        new = available.pop(0)
+        repl[old] = new
+        names.add(new)
 
     class Renamer(ast.NodeTransformer):
         def visit_Name(self, node):
-            if node.id == longest: node.id = new
+            if node.id in repl:
+                node.id = repl[node.id]
             return node
+
         def visit_arg(self, node):
-            if node.arg == longest: node.arg = new
+            if node.arg in repl:
+                node.arg = repl[node.arg]
             return node
+
     Renamer().visit(fn)
     return True
 
@@ -67,8 +80,10 @@ def transform_loop_max(fn):
     for i in range(len(body)-2):
         it = _match_max(body, i)
         if it is not None:
-            body[i:i+3] = [ast.Return(value=ast.Call(func=ast.Name(id="max", ctx=ast.Load()),
-                                                     args=[it], keywords=[]))]
+            call = ast.Call(func=ast.Name(id="max", ctx=ast.Load()), args=[it], keywords=[])
+            body[i:i+3] = [ast.Return(value=ast.IfExp(test=ast.Name(id=it.id, ctx=ast.Load()),
+                                                     body=call,
+                                                     orelse=ast.Constant(value=None)))]
             ast.fix_missing_locations(fn); return True
     return False
 
